@@ -1,7 +1,7 @@
 
 # Flask XLSX Modeling & Prediction App
 
-This application is designed to read data from an XLSX (Excel) file, perform data modeling, and provide inference and prediction capabilities via a Flask web interface. It is intended as a demonstration of a typical data science workflow, from data ingestion to model deployment.
+This application is designed to read data from an XLSX (Excel) file, perform data modeling—including graph-based methods—and provide inference and prediction capabilities via a Flask web interface. It demonstrates a typical data science workflow, from data ingestion to model deployment, with a focus on using XGBoost and graph data techniques.
 
 ---
 
@@ -13,6 +13,7 @@ This application is designed to read data from an XLSX (Excel) file, perform dat
 - [Setup Instructions](#setup-instructions)
 - [Usage Guide](#usage-guide)
 - [Modeling Approach](#modeling-approach)
+- [Graph Data & Methods](#graph-data--methods)
 - [Code Structure](#code-structure)
 - [Extending the App](#extending-the-app)
 - [Troubleshooting](#troubleshooting)
@@ -22,7 +23,7 @@ This application is designed to read data from an XLSX (Excel) file, perform dat
 
 ## Project Overview
 
-This app allows users to upload an Excel file, processes the data, applies a machine learning model, and returns predictions. The goal is to provide an end-to-end example of how to operationalize data science models using Python and Flask.
+This app allows users to upload an Excel file, processes the data—including graph-structured data—applies a machine learning model using XGBoost, and returns predictions. The goal is to provide an end-to-end example of operationalizing data science models with advanced modeling techniques using Python and Flask.
 
 ---
 
@@ -30,7 +31,8 @@ This app allows users to upload an Excel file, processes the data, applies a mac
 
 - Upload XLSX files for analysis
 - Data preprocessing and validation
-- Model training (e.g., regression or classification)
+- Graph data extraction and analysis
+- Model training with XGBoost classification
 - Real-time inference and prediction via web interface
 - Downloadable results
 - Modular and extensible codebase
@@ -47,9 +49,9 @@ Flask Web App
     |
     +-- XLSX File Upload & Parsing
     |
-    +-- Data Preprocessing
+    +-- Data Preprocessing & Graph Construction
     |
-    +-- Model Training / Loading
+    +-- Model Training / Loading (XGBoost)
     |
     +-- Prediction & Results
 ```
@@ -98,7 +100,7 @@ The app will be available at [http://localhost:5000](http://localhost:5000).
 
 1. **Open the app** in your browser.
 2. **Upload your XLSX file** using the provided form.
-3. **Wait for processing**; the app will display data summaries and model predictions.
+3. **Wait for processing**; the app will display data summaries, graph visualizations, and model predictions.
 4. **Download results** if available.
 
 ---
@@ -106,10 +108,19 @@ The app will be available at [http://localhost:5000](http://localhost:5000).
 ## Modeling Approach
 
 - **Data Ingestion:** Reads XLSX files using `pandas`.
-- **Preprocessing:** Handles missing values, encodes categorical variables, and normalizes features.
-- **Modeling:** Uses scikit-learn (e.g., LinearRegression, RandomForestClassifier) for training.
-- **Inference:** Applies the trained model to new data for predictions.
+- **Preprocessing:** Handles missing values, encodes categorical variables, normalizes features, and constructs graph representations if applicable.
+- **Modeling:** Uses XGBoost for training regression or classification models, leveraging both tabular and graph-derived features.
+- **Inference:** Applies the trained XGBoost model to new data for predictions.
 - **Persistence:** Optionally saves trained models for reuse.
+
+---
+
+## Graph Data & Methods
+
+- **Graph Construction:** If the uploaded data contains relationships (e.g., networks, connections), the app constructs a graph using libraries such as `networkx`.
+- **Graph Features:** Extracts features like node degree, centrality, clustering coefficients, or community assignments to enrich the dataset.
+- **Integration with Modeling:** Graph-derived features are combined with tabular data and used as input for XGBoost models, enabling the model to capture complex relational patterns.
+- **Visualization:** The app can display basic graph visualizations to help users understand the structure of their data.
 
 ---
 
@@ -118,7 +129,8 @@ The app will be available at [http://localhost:5000](http://localhost:5000).
 ```
 flask_app/
 ├── app.py              # Main Flask application
-├── models.py           # Model training and inference logic
+├── models.py           # Model training and inference logic (XGBoost)
+├── graph_utils.py      # Graph construction and feature extraction
 ├── utils.py            # Helper functions (data cleaning, etc.)
 ├── templates/          # HTML templates for Flask
 ├── static/             # Static files (CSS, JS)
@@ -131,8 +143,8 @@ flask_app/
 ## Extending the App
 
 - Add support for other file formats (CSV, JSON)
-- Integrate additional machine learning models
-- Enhance the web UI for better user experience
+- Integrate additional machine learning or graph neural network models
+- Enhance the web UI for better user experience and graph exploration
 - Deploy to cloud platforms (Heroku, AWS, etc.)
 
 ---
@@ -142,13 +154,6 @@ flask_app/
 - **Dependency Issues:** Ensure all packages in `requirements.txt` are installed.
 - **File Upload Errors:** Check file format and size.
 - **Model Errors:** Inspect logs for stack traces; ensure data matches model expectations.
+- **Graph Construction Issues:** Verify that the data contains valid relationships for graph building.
 
 ---
-
-## License
-
-This project is licensed under the MIT License.
-
----
-
-**For questions or contributions, please open an issue or pull request on GitHub.**
