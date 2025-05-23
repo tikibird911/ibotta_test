@@ -1,7 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-import pandas as pd
 import os
 from werkzeug.utils import secure_filename
+import joblib
+import uuid
+
+
+from src.modeling.modeling import model_QB
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Needed for flashing messages
@@ -35,13 +39,31 @@ def upload():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(filepath)
-        # Read the XLSX file with pandas
-        df = pd.read_excel(filepath)
-        # Do your modeling/inference here
-        # For demonstration, just show the first 5 rows as HTML
-        table_html = df.head().to_html()
-        return f"<h2>Preview of Uploaded File</h2>{table_html}<br><a href='{url_for('home')}'>Back</a>"
+        # Train and get model, report, and fig
+        model, report, fig = model_QB(filepath)
+        # Save the trained model for later use
+        model_path = os.path.join(app.config["UPLOAD_FOLDER"], "latest_xgb_model.pkl")
+        joblib.dump(model, model_path)
+        # Save the plot if it exists
+        plot_url = None
+        if fig:
+            plot_filename = f"plot_{uuid.uuid4().hex}.png"
+            plot_path = os.path.join(app.config["UPLOAD_FOLDER"], plot_filename)
+            fig.savefig(plot_path)
+            plot_url = url_for("uploaded_file", filename=plot_filename)
+        return render_template(
+            "model_result.html",
+            report=report,
+            plot_url=plot_url
+        )
     else:
         flash("Invalid file type. Please upload an XLSX file.")
         return redirect(url_for("home"))
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
