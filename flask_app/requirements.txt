@@ -1,1 +1,8 @@
 flask
+pandas
+numpy
+scikit-learn
+scipy
+matplotlib
+seaborn
+openpyxl
