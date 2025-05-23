@@ -72,7 +72,6 @@ form.onsubmit = function(e) {
     });
 };
 
-// Handle customer prediction by ID
 document.getElementById('customer-form').onsubmit = function(e) {
     e.preventDefault();
     const customerId = document.getElementById('customer-id-input').value;
@@ -84,7 +83,27 @@ document.getElementById('customer-form').onsubmit = function(e) {
             if (data.error) {
                 customerResults.innerHTML = `<p style="color:red;">${data.error}</p>`;
             } else {
-                let html = `<h3>Predictions</h3><pre>${JSON.stringify(data.predictions, null, 2)}</pre>`;
+                let html = `<h3>Predictions</h3>`;
+                if (data.predictions && data.predictions.length > 0) {
+                    html += `<table border="1" style="border-collapse:collapse;"><tr>`;
+                    // Table headers
+                    Object.keys(data.predictions[0]).forEach(key => {
+                        html += `<th>${key}</th>`;
+                    });
+                    html += `</tr>`;
+                    // Table rows
+                    data.predictions.forEach(row => {
+                        html += `<tr>`;
+                        Object.values(row).forEach(val => {
+                            html += `<td>${val}</td>`;
+                        });
+                        html += `</tr>`;
+                    });
+                    html += `</table>`;
+                } else {
+                    html += `<p>No predictions found.</p>`;
+                }
+                // Top features
                 if (data.top_features) {
                     html += `<h4>Top Features</h4><ul>`;
                     data.top_features.forEach(f => {
@@ -92,6 +111,7 @@ document.getElementById('customer-form').onsubmit = function(e) {
                     });
                     html += `</ul>`;
                 }
+                // Top feature averages
                 if (data.top_feature_averages) {
                     html += `<h4>Top Feature Averages</h4><ul>`;
                     for (const [feat, avg] of Object.entries(data.top_feature_averages)) {
