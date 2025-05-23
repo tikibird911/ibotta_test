@@ -8,4 +8,3 @@ seaborn
 openpyxl
 xgboost
 igraph
-uuid

@@ -1,14 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import os
 from werkzeug.utils import secure_filename
-import joblib
-import uuid
-
+import random
 
 from src.modeling.modeling import model_QB
+from src.preds_infr.preds import predict_by_customer_id
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # Needed for flashing messages
+app.secret_key = "supersecretkey"
 
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"xlsx"}
@@ -17,53 +16,54 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# Global variables to store model and data
+latest_model = None
+latest_journey_df = None
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 @app.route("/", methods=["GET"])
 def home():
     return render_template("home.html")
 
-
 @app.route("/model", methods=["POST"])
 def upload():
+    global latest_model, latest_journey_df
     if "file" not in request.files:
-        flash("No file part")
-        return redirect(url_for("home"))
+        return jsonify({"error": "No file part"})
     file = request.files["file"]
     if file.filename == "":
-        flash("No selected file")
-        return redirect(url_for("home"))
+        return jsonify({"error": "No selected file"})
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(filepath)
-        # Train and get model, report, and fig
-        model, report, fig = model_QB(filepath)
-        # Save the trained model for later use
-        model_path = os.path.join(app.config["UPLOAD_FOLDER"], "latest_xgb_model.pkl")
-        joblib.dump(model, model_path)
-        # Save the plot if it exists
-        plot_url = None
-        if fig:
-            plot_filename = f"plot_{uuid.uuid4().hex}.png"
-            plot_path = os.path.join(app.config["UPLOAD_FOLDER"], plot_filename)
-            fig.savefig(plot_path)
-            plot_url = url_for("uploaded_file", filename=plot_filename)
-        return render_template(
-            "model_result.html",
-            report=report,
-            plot_url=plot_url
-        )
+        model, report, importance_table_html, journey_df = model_QB(filepath)
+
+        latest_model = model
+        latest_journey_df = journey_df
+        customer_ids = latest_journey_df['customer_id'].drop_duplicates().sample(n=5, random_state=42).tolist() \
+            if len(latest_journey_df) >= 5 else latest_journey_df['customer_id'].drop_duplicates().tolist()
+        
+        return jsonify({
+            "report": report,
+            "importance_table_html": importance_table_html,
+            "sample_customer_ids": customer_ids
+        })
     else:
-        flash("Invalid file type. Please upload an XLSX file.")
-        return redirect(url_for("home"))
+        return jsonify({"error": "Invalid file type. Please upload an XLSX file."})
+
+@app.route("/predict_by_customer", methods=["GET"])
+def predict_by_customer():
+    global latest_model, latest_journey_df
+    customer_id = request.args.get("customer_id")
+    json_values = predict_by_customer_id(latest_model, latest_journey_df, customer_id)
+    return json_values
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
 
 if __name__ == "__main__":
     app.run(debug=True)

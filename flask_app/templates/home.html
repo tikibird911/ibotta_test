@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     <title>Upload and Train Model</title>
     <style>
         #spinner { display: none; }
@@ -12,11 +13,20 @@
         <input type="file" name="file" accept=".xlsx" required>
         <button type="submit">Upload & Train</button>
     </form>
+
     <div id="spinner">
+        <div class="loader"></div>
         <p>Processing... <span id="timer">0</span> seconds</p>
-        <img src="{{ url_for('static', filename='spinner.gif') }}" alt="Loading...">
     </div>
     <div id="results"></div>
+    <div id="customer-query" style="display:none;">
+        <h2>Predict by Customer ID</h2>
+        <form id="customer-form">
+            <input type="text" id="customer-id-input" placeholder="Enter Customer ID" required>
+            <button type="submit">Get Prediction</button>
+        </form>
+        <div id="customer-results"></div>
+    </div>
     <script src="{{ url_for('static', filename='home.js') }}"></script>
 </body>
 </html>

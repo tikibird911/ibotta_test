@@ -1,17 +1,12 @@
 import pandas as pd
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 import networkx as nx
-import random
-from collections import Counter
 import igraph as ig
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 import xgboost as xgb
 from sklearn.metrics import classification_report
-import matplotlib.pyplot as plt
 
 
 def clean_data(df):
@@ -107,6 +102,7 @@ def nx_to_igraph(G):
     g = ig.Graph(edges=edges, directed=False)
     g.es['weight'] = weights
     return g, mapping
+
 
 def igraph_closeness_centrality(G):
     g, mapping = nx_to_igraph(G)
@@ -222,10 +218,10 @@ def journey_centrality_features(G, df):
     return pd.DataFrame(features)
 
 
-def train_xgb_model(journey_df, plot_importance=True):
+def train_xgb_model(journey_df, show_importance_table=True):
     """
     Trains an XGBoost classifier on journey_df and returns the trained model,
-    the classification report (as a string), and the matplotlib figure (if plot_importance=True).
+    the classification report (as a string), and the Plotly figure (if plot_importance=True).
     """
     # Encode most_common_category as integer
     le = LabelEncoder()
@@ -261,23 +257,36 @@ def train_xgb_model(journey_df, plot_importance=True):
     y_pred = model.predict(X_test)
     report = classification_report(y_test, y_pred)
 
-    fig = None
-    if plot_importance:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        xgb.plot_importance(model, max_num_features=15, ax=ax)
-        plt.tight_layout()
+    importance_table_html = None
+    if show_importance_table:
+        importances = model.feature_importances_
+        indices = importances.argsort()[::-1][:15]  # Top 15 features
+        top_features = [feature_cols[i] for i in indices]
+        top_importances = importances[indices]
 
-    return model, report, fig
+        # Option 1: Return as HTML table
+        rows = [
+            f"<tr><td>{feat}</td><td>{imp:.4f}</td></tr>"
+            for feat, imp in zip(top_features, top_importances)
+        ]
+        importance_table_html = (
+            "<table border='1'><tr><th>Feature</th><th>Importance</th></tr>"
+            + "".join(rows) +
+            "</table>"
+        )
+
+    return model, report, importance_table_html
 
 
 def model_QB(excel_file):
-
     df = pd.read_excel(excel_file)
     df = clean_data(df)
     G, customer_status = build_customer_journey_graph_with_engager(df)  
     add_centrality_metrics(G)
     journey_df = create_journey_df_with_last_node_centrality(G, df)
-    journey_df = journey_centrality_features(G, df)
-    model, report, fig = train_xgb_model(journey_df)
-    
-    return model, report, fig
+    centrality_df = journey_centrality_features(G, df)
+    # Merge on customer_id and receipt_id
+    journey_df = pd.merge(journey_df, centrality_df, on=['customer_id', 'receipt_id'], how='left')
+    model, report, importance_table_html = train_xgb_model(journey_df)
+
+    return model, report, importance_table_html, journey_df
